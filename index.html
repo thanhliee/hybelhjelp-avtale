@@ -209,7 +209,7 @@ Totalt: <b id="v_tot_hus">0 hus</b> – <b id="v_tot_hybler">0 hybler</b> – To
 </div>
 
 <script>
-const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyRLs552X0C38jBpdlO39-LGME0ZLxdQY53EF_pLbEkMPkc6ev9T9VNfmQlwgEMmm8/exec';
+const GOOGLE_SHEET_URL = '';
 function $(id){return document.getElementById(id)}
 function syncTop(){
   const navn=$('f_navn').value.trim()||'fylles automatisk under ↓';
@@ -229,7 +229,8 @@ function getHusData(){
     const ant=r.querySelector('.h-ant').value.trim();
     const inntektRaw=r.querySelector('.h-inntekt').value.trim();
     const inntekt=parseInt(inntektRaw.replace(/\s/g,''))||0;
-    if(adr || ant || inntektRaw){ data.push({adr:adr||'(mangler adresse)', ant:ant||'0', inntektRaw: !!inntektRaw, inntekt:inntekt}); }
+    const pris = inntektRaw ? (inntekt >= 20000 ? 2000 : 1500) : 1500;
+    if(adr || ant || inntektRaw){ data.push({adr:adr||'(mangler adresse)', ant:ant||'0', inntektRaw: !!inntektRaw, inntekt:inntekt, pris:pris}); }
   });
   return data;
 }
@@ -333,13 +334,14 @@ function sendAvtale(){
   const totalPris = husData.reduce((s,h)=>s+h.pris,0);
   const totalInntekt = husData.reduce((s,h)=>s+h.inntekt,0);
   updateSigPreview();
+  const sigImg=$('printSigImg'); const sigData=(sigImg && sigImg.src && sigImg.src.indexOf('data:image')===0) ? sigImg.src : '';
   if(!GOOGLE_SHEET_URL){
     msg.style.display='block';
     msg.innerHTML=`✅ DEMO signert: ${navn} – ${epost} / ${tlf} – ${husStr} – Totalt ${husData.length} hus, ${totalInntekt} kr/mnd, Pris ${totalPris} kr/mnd (fast pris, ingen mva-tillegg per d.d.). Legg til GOOGLE_SHEET_URL for å lagre i Sheets.`;
     return;
   }
-  fetch(GOOGLE_SHEET_URL,{method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({type:'oppdragsavtale_v3','E-post':epost,Telefon:tlf,Navn:navn,Adresse:husStr,Antall:husData.reduce((s,h)=>s+(parseInt(h.ant)||0),0),Inntekt:totalInntekt,Pris:totalPris,Melding:`NY AVTALE V3 – ${navn} – ${epost}/${tlf} – ${husStr} – ${husData.length} hus – ${totalPris} kr/mnd (fast pris)`,tid:new Date().toLocaleString('nb-NO'),side:location.href,samtykke:'Ja'})});
-  msg.style.display='block'; msg.textContent=`✅ Takk! Avtalen er signert for ${husData.length} hus – Total ${totalPris} kr/mnd (fast pris). Kopi sendes til ${epost}`;
+  fetch(GOOGLE_SHEET_URL,{method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({type:'oppdragsavtale_v3','E-post':epost,Telefon:tlf,Navn:navn,Adresse:husStr,Antall:husData.reduce((s,h)=>s+(parseInt(h.ant)||0),0),Inntekt:totalInntekt,Pris:totalPris,Signatur:sigData,Melding:`NY AVTALE V3 – ${navn} – ${epost}/${tlf} – ${husStr} – ${husData.length} hus – ${totalPris} kr/mnd (fast pris)`,tid:new Date().toLocaleString('nb-NO'),side:location.href,samtykke:'Ja'})});
+  msg.style.display='block'; msg.textContent=`✅ Takk! Avtalen er signert for ${husData.length} hus – Total ${totalPris} kr/mnd (fast pris). Vi sender en kopi til ${epost} – sjekk søppelpost hvis den ikke dukker opp.`;
   $('btnSign').textContent='Sendt ✓';
 }
 window.addEventListener('beforeprint',()=>{ syncHus(); updateSigPreview(); });
