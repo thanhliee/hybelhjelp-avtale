@@ -387,10 +387,10 @@ function sendAvtale(){
     msg.innerHTML=`✅ DEMO signert: ${navn} – ${epost} / ${tlf} – ${husStr} – Totalt ${husData.length} hus, ${totalInntekt} kr/mnd, Pris ${totalPris} kr/mnd (fast pris, ingen mva-tillegg per d.d.). Legg til GOOGLE_SHEET_URL for å lagre i Sheets.`;
     return;
   }
-  fetch(GOOGLE_SHEET_URL,{method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({type:'oppdragsavtale_v3','E-post':epost,Telefon:tlf,Navn:navn,Adresse:husStr,Antall:husData.reduce((s,h)=>s+(parseInt(h.ant)||0),0),Inntekt:totalInntekt,Pris:totalPris,Signatur:sigData,Melding:`NY AVTALE V3 – ${navn} – ${epost}/${tlf} – ${husStr} – ${husData.length} hus – ${totalPris} kr/mnd (fast pris)`,tid:new Date().toLocaleString('nb-NO'),side:location.href,samtykke:'Ja'})});
-  msg.style.display='block'; msg.textContent=`✅ Takk! Avtalen er signert for ${husData.length} hus – Total ${totalPris} kr/mnd (fast pris). Vi sender en kopi til ${epost}, sjekk søppelpost hvis den ikke dukker opp.`;
+  fetch(GOOGLE_SHEET_URL,{method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({type:'oppdragsavtale','E-post':epost,Telefon:tlf,Navn:navn,Adresse:husStr,Antall:husData.reduce((s,h)=>s+(parseInt(h.ant)||0),0),Inntekt:totalInntekt,Pris:totalPris,Signatur:sigData,Melding:`NY AVTALE – ${navn} – ${epost}/${tlf} – ${husStr} – ${husData.length} hus – ${totalPris} kr/mnd (fast pris)`,tid:new Date().toLocaleString('nb-NO'),side:location.href,samtykke:'Ja'})});
+  msg.style.display='block'; msg.textContent=`✅ Takk! Avtalen er signert for ${husData.length} hus – Total ${totalPris} kr/mnd (fast pris).`;
   $('btnSign').textContent='Sendt ✓';
-  pdfLoft.then(function(ok){ msg.innerHTML += ok ? '<br>📄 Avtalen er lastet ned som PDF (sjekk nedlastinger).' : '<br>Kunne ikke lage PDF automatisk – bruk «Last ned avtalen som PDF» under.'; });
+  pdfLoft.then(function(ok){ msg.innerHTML += ok ? '<br>📄 Avtalen er lastet ned som PDF (sjekk nedlastinger).' : '<br>Kunne ikke lage PDF automatisk, bruk «Last ned avtalen som PDF» under.'; });
 }
 window.addEventListener('beforeprint',()=>{ syncHus(); updateSigPreview(); });
 </script>
