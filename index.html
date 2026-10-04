@@ -25,6 +25,7 @@ h1{font-size:clamp(30px,5vw,44px);line-height:1.1;margin:0}
 .grid3{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .field{border:1px dashed var(--bd);border-radius:12px;padding:12px;background:#fffefb}
 .field b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:4px}
+.field .sum b{display:inline;font-size:inherit;text-transform:none;letter-spacing:0;color:var(--fg);margin:0}
 .field .val{font-weight:600;border-bottom:1px solid #aaa;padding:0 3px}
 .field .val.empty{color:#999;font-weight:400;border-bottom-style:dashed}
 .hus-row{display:grid;grid-template-columns:1fr 90px 180px 36px;gap:8px;align-items:end;margin-bottom:10px}
@@ -45,7 +46,12 @@ li{margin:5px 0}
   @page{margin:12mm; size:A4}
 }
 footer{padding:32px 0;color:var(--mut);font-size:13px;text-align:center;border-top:1px solid var(--bd);margin-top:40px}
+/* PDF-modus: brukes kun på kopien som lages til nedlasting */
+.pdf-mode{border:0 !important;box-shadow:none !important;border-radius:0 !important;padding:0 !important;margin:0 !important;background:#fff;font-size:13px;line-height:1.5;color:#1c2a2e}
+.pdf-mode h2{font-size:15px;margin:22px 0 8px}
+.pdf-mode .pdf-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1c2a2e;padding-bottom:10px;margin-bottom:16px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
 </head>
 <body>
 <div class="w">
@@ -62,7 +68,7 @@ footer{padding:32px 0;color:var(--mut);font-size:13px;text-align:center;border-t
 <div class="paper" id="avtale">
 <h2>1. Parter og definisjoner</h2>
 <div class="grid2">
-<div class="field"><b>Tjenesteleverandør</b>Thanh Le<br>Opererer under Hybelhjelp Trondheim<br>973 02 887 • hei@hybelhjelp.no<br><small style="color:var(--mut)"></small></div>
+<div class="field"><b>Tjenesteleverandør</b>Thanh Le<br>Opererer under Hybelhjelp Trondheim<br>973 02 887 • hei@hybelhjelp.no<br><small style="color:var(--mut)">Vakttelefon hver dag 08-22. E-post svares innen 24t.</small><br><small style="color:var(--mut)"></small></div>
 <div class="field"><b>Utleier (kunde)</b>
 <div>Navn/Firma: <span id="v_navn" class="val empty">fylles automatisk under ↓</span></div>
 <div>E-post: <span id="v_epost" class="val empty">fylles automatisk under ↓</span></div>
@@ -74,7 +80,7 @@ footer{padding:32px 0;color:var(--mut);font-size:13px;text-align:center;border-t
 <div id="v_hus_list" class="hus-list">
 <div class="hus-item" style="color:#999">Ingen hus lagt til ennå, fyll ut under ↓</div>
 </div>
-<div style="margin-top:10px;font-size:13px;color:var(--mut);background:#fbf8f3;padding:10px 12px;border-radius:10px">
+<div class="sum" style="margin-top:10px;font-size:13px;color:var(--mut);background:#fbf8f3;padding:10px 12px;border-radius:10px">
 Totalt: <b id="v_tot_hus">0 hus</b> – <b id="v_tot_hybler">0 hybler</b> – Total leieinntekt: <b id="v_tot_inntekt">0 kr</b> – Pris: <b id="v_pris">0 kr/mnd</b><br>
 <ul>
   <li><strong>1 500 kr/mnd</strong> per hus når total leieinntekt er under 20 000 kr/mnd før øvrige kostnader.</li>
@@ -200,16 +206,16 @@ Totalt: <b id="v_tot_hus">0 hus</b> – <b id="v_tot_hybler">0 hybler</b> – To
 
 <div class="actionbar">
 <button id="btnSign" class="btn" onclick="sendAvtale()">Signer og send avtalen</button>
-<button class="btn o" type="button" onclick="window.print()">🖨 Skriv ut avtalen</button>
+<button id="btnPdf" class="btn o" type="button" onclick="lastNedPdf()">⬇ Last ned avtalen som PDF</button>
 </div>
-<p style="font-size:12px;color:var(--mut);margin-top:8px"></p>
+<p style="font-size:12px;color:var(--mut);margin-top:8px">Når du signerer, lastes avtalen automatisk ned som PDF med signaturen din. Du kan også laste den ned igjen med knappen over.</p>
 </div>
 
-<footer>Hybelhjelp Trondheim • hei@hybelhjelp.no • Ingen persondata lagres utover det som trengs for oppdraget</footer>
+<footer>Hybelhjelp Trondheim • Vakttelefon 973 02 887 (08-22) • hei@hybelhjelp.no • Ingen persondata lagres utover det som trengs for oppdraget</footer>
 </div>
 
 <script>
-const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyRLs552X0C38jBpdlO39-LGME0ZLxdQY53EF_pLbEkMPkc6ev9T9VNfmQlwgEMmm8/exec';
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyRLs552X0C38jBpdlO39-LGME0ZLxdQY53EF_pLbEkMPkc6ev9T9VNfmQlwgEMmm8/exec'; // DIN APPS SCRIPT URL
 function $(id){return document.getElementById(id)}
 function syncTop(){
   const navn=$('f_navn').value.trim()||'fylles automatisk under ↓';
@@ -219,7 +225,7 @@ function syncTop(){
   if($('v_epost')){$('v_epost').textContent=epost; $('v_epost').className= epost.includes('fylles')?'val empty':'val';}
   if($('v_tlf')){$('v_tlf').textContent=tlf; $('v_tlf').className= tlf.includes('fylles')?'val empty':'val';}
   if($('v_sig_navn')){$('v_sig_navn').textContent=navn; $('v_sig_navn').className= navn.includes('fylles')?'val empty':'val';}
-  if($('v_dato')){$('v_dato').textContent=new Date().toLocaleDateString('nb-NO',{day:'2-digit',month:'long',year:'numeric'}) + ' – Trondheim';}
+  if($('v_dato')){$('v_dato').textContent=new Date().toLocaleDateString('nb-NO',{day:'2-digit',month:'long',year:'numeric'}) + ', Trondheim';}
 }
 function getHusData(){
   const rows=document.querySelectorAll('.hus-row');
@@ -238,7 +244,7 @@ function addHus(adr='', ant='', inntekt=''){
   const wrap=$('husInputs');
   const row=document.createElement('div');
   row.className='hus-row';
-  row.innerHTML=`<div><input class="h-adr" placeholder="Adresse, f.eks. Elgeseter gate 10" value="${adr}"><div style="font-size:11px;color:var(--mut);margin-top:2px">Gateadresse</div></div><div><input class="h-ant" placeholder="3" value="${ant}" type="number" min="1"><div style="font-size:11px;color:var(--mut)">Ant hybler</div></div><div><input class="h-inntekt" placeholder="18500" value="${inntekt}" type="number"><div style="font-size:11px;color:var(--mut)">Leieinntekt/mnd (før øvrig)</div></div><div><button type="button" onclick="this.closest('.hus-row').remove();syncHus()" style="width:36px;height:42px;border-radius:10px;border:1px solid var(--bd);background:#fff;cursor:pointer">✕</button></div>`;
+  row.innerHTML=`<div><input class="h-adr" placeholder="Adresse, f.eks. Elgeseter gate 10" value="${adr}"><div style="font-size:11px;color:var(--mut);margin-top:2px">Gateadresse</div></div><div><input class="h-ant" placeholder="3" value="${ant}" type="number" min="1"><div style="font-size:11px;color:var(--mut)">Ant hybler</div></div><div><input class="h-inntekt" placeholder="18500" value="${inntekt}" type="number"><div style="font-size:11px;color:var(--mut)">Leieinntekt/mnd (før øvrige kost.)</div></div><div><button type="button" onclick="this.closest('.hus-row').remove();syncHus()" style="width:36px;height:42px;border-radius:10px;border:1px solid var(--bd);background:#fff;cursor:pointer">✕</button></div>`;
   wrap.appendChild(row);
   row.querySelectorAll('input').forEach(inp=>inp.addEventListener('input', syncHus));
   syncHus();
@@ -321,6 +327,45 @@ function clearPad(){
   const img=$('printSigImg'); if(img) img.removeAttribute('src');
   updateSigPreview();
 }
+let pdfBusy=false;
+function pdfFilnavn(){
+  const n=($('f_navn').value.trim()||'Utleier').replace(/[^A-Za-z0-9æøåÆØÅ]+/g,'_').replace(/^_+|_+$/g,'');
+  return 'Oppdragsavtale_Hybelhjelp_'+n+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+}
+// Lager PDF av avtalen (inkl. utfylte felt og signaturer) og laster den ned automatisk
+function lagAvtalePdf(){
+  try{ return lagAvtalePdf_(); }catch(err){ pdfBusy=false; console.error('PDF-feil',err); return Promise.resolve(false); }
+}
+function lagAvtalePdf_(){
+  if(typeof html2pdf==='undefined'){ window.print(); return Promise.resolve(false); }
+  if(pdfBusy) return Promise.resolve(false);
+  pdfBusy=true;
+  syncHus(); updateSigPreview();
+  const clone=$('avtale').cloneNode(true);
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+  clone.classList.add('pdf-mode');
+  const dato=new Date().toLocaleDateString('nb-NO',{day:'2-digit',month:'long',year:'numeric'});
+  const head=document.createElement('div'); head.className='pdf-head';
+  head.innerHTML='<div><div style="font-weight:800;font-size:18px">Hybelhjelp <span style="color:#e2553f">Trondheim</span></div><div style="font-size:12px;color:#5c6b6f">Oppdragsavtale • Forvaltning av utleiebolig</div></div><div style="font-size:11px;color:#5c6b6f;text-align:right">Signert '+dato+'</div>';
+  clone.insertBefore(head, clone.firstChild);
+  const mobil = window.innerWidth<800;
+  const opt={
+    margin:[12,10,16,10], filename:pdfFilnavn(),
+    image:{type:'jpeg',quality:0.95},
+    html2canvas:{scale: mobil?1.5:2, useCORS:true, backgroundColor:'#ffffff', scrollX:0, scrollY:0, windowWidth:Math.max(document.documentElement.clientWidth,718)},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+    pagebreak:{mode:['css','legacy'], avoid:['h2','h3','.field','.sig','li']}
+  };
+  return html2pdf().set(opt).from(clone).toPdf().get('pdf').then(function(pdf){
+    const n=pdf.internal.getNumberOfPages();
+    for(let i=1;i<=n;i++){ pdf.setPage(i); pdf.setFontSize(9); pdf.setTextColor(120); pdf.text('Hybelhjelp Trondheim  •  Side '+i+' av '+n, 105, 290, {align:'center'}); }
+  }).save().then(function(){ pdfBusy=false; return true; }).catch(function(err){ pdfBusy=false; console.error('PDF-feil',err); return false; });
+}
+function lastNedPdf(){
+  const b=$('btnPdf'); const old=b.textContent; b.textContent='Lager PDF …';
+  lagAvtalePdf().then(function(ok){ b.textContent= ok ? '✓ Lastet ned' : old; if(!ok) alert('Kunne ikke lage PDF. Bruk Ctrl+P / Del → Skriv ut → Lagre som PDF i stedet.'); setTimeout(function(){b.textContent=old;},2500); });
+}
 function sendAvtale(){
   const navn=$('f_navn').value.trim(); const epost=$('f_epost').value.trim(); const tlf=$('f_tlf').value.trim(); const gdpr=$('f_gdpr').checked; const msg=$('msg');
   const husData = getHusData();
@@ -334,15 +379,18 @@ function sendAvtale(){
   const totalPris = husData.reduce((s,h)=>s+h.pris,0);
   const totalInntekt = husData.reduce((s,h)=>s+h.inntekt,0);
   updateSigPreview();
+  const pdfLoft = lagAvtalePdf();
   const sigImg=$('printSigImg'); const sigData=(sigImg && sigImg.src && sigImg.src.indexOf('data:image')===0) ? sigImg.src : '';
   if(!GOOGLE_SHEET_URL){
     msg.style.display='block';
+    pdfLoft.then(function(ok){ msg.innerHTML += ok ? '<br>📄 Avtalen er lastet ned som PDF.' : ''; });
     msg.innerHTML=`✅ DEMO signert: ${navn} – ${epost} / ${tlf} – ${husStr} – Totalt ${husData.length} hus, ${totalInntekt} kr/mnd, Pris ${totalPris} kr/mnd (fast pris, ingen mva-tillegg per d.d.). Legg til GOOGLE_SHEET_URL for å lagre i Sheets.`;
     return;
   }
   fetch(GOOGLE_SHEET_URL,{method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({type:'oppdragsavtale_v3','E-post':epost,Telefon:tlf,Navn:navn,Adresse:husStr,Antall:husData.reduce((s,h)=>s+(parseInt(h.ant)||0),0),Inntekt:totalInntekt,Pris:totalPris,Signatur:sigData,Melding:`NY AVTALE V3 – ${navn} – ${epost}/${tlf} – ${husStr} – ${husData.length} hus – ${totalPris} kr/mnd (fast pris)`,tid:new Date().toLocaleString('nb-NO'),side:location.href,samtykke:'Ja'})});
-  msg.style.display='block'; msg.textContent=`✅ Takk! Avtalen er signert for ${husData.length} hus – Total ${totalPris} kr/mnd (fast pris). Vi sender en kopi til ${epost} – sjekk søppelpost hvis den ikke dukker opp.`;
+  msg.style.display='block'; msg.textContent=`✅ Takk! Avtalen er signert for ${husData.length} hus – Total ${totalPris} kr/mnd (fast pris). Vi sender en kopi til ${epost}, sjekk søppelpost hvis den ikke dukker opp.`;
   $('btnSign').textContent='Sendt ✓';
+  pdfLoft.then(function(ok){ msg.innerHTML += ok ? '<br>📄 Avtalen er lastet ned som PDF (sjekk nedlastinger).' : '<br>Kunne ikke lage PDF automatisk – bruk «Last ned avtalen som PDF» under.'; });
 }
 window.addEventListener('beforeprint',()=>{ syncHus(); updateSigPreview(); });
 </script>
