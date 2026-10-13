@@ -195,10 +195,10 @@ Totalt: <b id="v_tot_hus">0 hus</b> – <b id="v_tot_hybler">0 hybler</b> – To
 </div>
 
 <div style="margin-top:20px">
-<canvas id="sigpad" width="600" height="200" style="width:100%;max-width:600px;height:140px;border:2px dashed var(--bd);border-radius:12px;background:#fffefb;cursor:crosshair"></canvas>
+<canvas id="sigpad" width="600" height="200" style="width:100%;max-width:600px;height:140px;border:2px dashed var(--bd);border-radius:12px;background:#fffefb;cursor:crosshair;opacity:.6;pointer-events:none"></canvas>
 <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
-<span id="sigStatus" style="font-size:13px;color:var(--mut)">Ikke signert ennå</span>
-<button class="btn o small" type="button" onclick="clearPad()">Tøm signatur</button>
+<span id="sigStatus" style="font-size:13px;color:var(--mut)">Trykk Aktiver signering for å signere</span>
+<button id="sigBtn" class="btn o small" type="button" onclick="handleSigBtn()">Aktiver signering</button>
 </div>
 </div>
 
@@ -288,7 +288,7 @@ function syncHus(){
 addHus('', '', '');
 syncHus();
 const PEN_COLOR='#1a44c4';
-let isDrawing=false, hasSigned=false, bb=null, rafPending=false;
+let isDrawing=false, hasSigned=false, bb=null, rafPending=false, sigActive=false;
 const canvas=$('sigpad'); const ctx=canvas.getContext('2d');
 ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=PEN_COLOR;
 function getPos(e){
@@ -312,7 +312,7 @@ function updateSigPreview(){
   box.style.display='block'; if(ph) ph.style.display='none';
 }
 function schedulePreview(){ if(rafPending) return; rafPending=true; requestAnimationFrame(()=>{rafPending=false; updateSigPreview();}); }
-function startDraw(e){ isDrawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); track(p); }
+function startDraw(e){ if(!sigActive) return; isDrawing=true; const p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); track(p); }
 function moveDraw(e){
   if(!isDrawing) return; const p=getPos(e);
   ctx.lineTo(p.x,p.y); ctx.strokeStyle=PEN_COLOR; ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x,p.y);
@@ -328,9 +328,22 @@ canvas.addEventListener('touchmove',e=>{e.preventDefault(); moveDraw(e);},{passi
 canvas.addEventListener('touchend',endDraw);
 function clearPad(){
   ctx.clearRect(0,0,canvas.width,canvas.height); hasSigned=false; bb=null;
-  $('sigStatus').textContent='Ikke signert ennå';
+  $('sigStatus').textContent = sigActive ? 'Klar til å signere, tegn over' : 'Trykk Aktiver signering for å signere';
   const img=$('printSigImg'); if(img) img.removeAttribute('src');
   updateSigPreview();
+}
+function activatePad(){
+  sigActive=true;
+  canvas.style.opacity='1';
+  canvas.style.pointerEvents='auto';
+  canvas.style.borderStyle='solid';
+  canvas.style.borderColor='#14524f';
+  $('sigStatus').textContent='Klar til å signere - tegn over';
+  const btn=$('sigBtn'); if(btn) btn.textContent='Tøm signatur';
+}
+function handleSigBtn(){
+  if(!sigActive){ activatePad(); return; }
+  clearPad();
 }
 let pdfBusy=false;
 function pdfFilnavn(){
